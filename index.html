@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>기억력 문항뷰어 시안 A·B·C 프로토타입</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+  --page:#F1F2F6; --chrome:#FFFFFF; --chrome-text:#1F2430; --chrome-sub:#5E6472; --chrome-line:#DADDE5;
+  /* product screen tokens (fixed light: mirrors the actual exam screen) */
+  --accent:#5B5FE3; --accent-soft:#EEEFFD; --ink:#1F2430; --sub:#6B7280; --line:#E3E5EA;
+  --panel:#E9EAF7; --ph:#ECEEF2; --stim:#E9DCC2; --pink:#EC4899; --warn:#E5484D; --disabled:#CDD1D9;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){ --page:#16181F; --chrome:#20232C; --chrome-text:#ECEEF3; --chrome-sub:#A3A9B6; --chrome-line:#343845; }
+}
+:root[data-theme="dark"]{ --page:#16181F; --chrome:#20232C; --chrome-text:#ECEEF3; --chrome-sub:#A3A9B6; --chrome-line:#343845; }
+*{box-sizing:border-box}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--page);color:var(--chrome-text);font-family:Pretendard,"Noto Sans KR","Apple SD Gothic Neo","Malgun Gothic",system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+.wrap{max-width:1240px;margin:0 auto;padding:20px 16px 48px}
+.top{display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between;margin-bottom:14px}
+.top h1{font-size:18px;margin:0;font-weight:800}
+.tabs{display:flex;gap:6px;flex-wrap:wrap}
+.tab{border:1px solid var(--chrome-line);background:var(--chrome);color:var(--chrome-text);border-radius:999px;padding:9px 16px;font:inherit;font-size:14px;font-weight:600;cursor:pointer}
+.tab[aria-selected="true"]{background:var(--accent);border-color:var(--accent);color:#fff}
+.reset{border:none;background:transparent;color:var(--chrome-sub);font:inherit;font-size:14px;text-decoration:underline;cursor:pointer;padding:8px}
+.tab:focus-visible,.reset:focus-visible,button:focus-visible{outline:3px solid #9DA0F2;outline-offset:2px}
+
+.device{background:#fff;color:var(--ink);border-radius:22px;border:10px solid #2A2D36;display:grid;grid-template-columns:1fr 330px;gap:28px;padding:22px 26px 26px 36px;min-height:640px;position:relative}
+.device .tools{position:absolute;top:14px;right:26px;display:flex;gap:12px;align-items:center;font-size:12px;color:var(--ink)}
+.toggle{width:40px;height:22px;border-radius:999px;background:#A9ACF2;position:relative}
+.toggle::after{content:"";position:absolute;left:3px;top:3px;width:16px;height:16px;border-radius:50%;background:#FFD43B}
+.ico{width:22px;height:22px;border:1.5px solid var(--ink);border-radius:50%;display:grid;place-items:center;font-size:10px;font-weight:700}
+.ico.sq{border-radius:4px}
+
+.main{display:flex;flex-direction:column;padding-top:28px;min-width:0}
+.q-title{display:flex;gap:8px;font-size:17px;font-weight:700;line-height:1.5;margin:0 0 18px}
+.q-title .no{color:var(--accent)}
+.content{flex:1}
+.stim{border:2px solid var(--stim);border-radius:14px;padding:26px 18px;text-align:center;position:relative;overflow:hidden;transition:all .45s ease}
+.stim .lbl{font-weight:700;margin-bottom:16px}
+.items{display:flex;justify-content:center;gap:clamp(10px,3vw,26px);flex-wrap:wrap}
+.item{display:flex;flex-direction:column;align-items:center;gap:8px}
+.item b{font-size:18px}
+.pic{width:clamp(64px,9vw,84px);aspect-ratio:1;border-radius:8px;background:var(--ph);display:grid;place-items:center;font-size:clamp(32px,4.5vw,44px)}
+.cover{position:absolute;inset:0;background:#F6F7F9;display:grid;place-items:center;align-content:center;gap:6px;color:var(--sub);font-size:15px;font-weight:600}
+.cover strong{color:var(--ink);font-size:16px}
+
+.meter{margin-top:14px;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.bar{flex:1;min-width:160px;height:10px;border-radius:999px;background:var(--ph);overflow:hidden}
+.bar i{display:block;height:100%;background:var(--accent);border-radius:999px}
+.sec{font-size:14px;font-weight:700;min-width:118px}
+.sec.low{color:var(--warn)}
+.btn{border:none;border-radius:999px;background:var(--accent);color:#fff;font:inherit;font-weight:700;font-size:14px;padding:10px 18px;cursor:pointer}
+.btn.line{background:#fff;color:var(--accent);border:1.5px solid var(--accent)}
+.btn:disabled{background:var(--disabled);color:#fff;border-color:transparent;cursor:not-allowed}
+.hint{font-size:13px;color:var(--sub);margin-top:10px;line-height:1.5}
+
+.collapsed{display:flex;align-items:center;justify-content:space-between;gap:10px;border:1.5px dashed var(--stim);border-radius:12px;padding:12px 16px;font-size:14px;color:var(--sub);margin-bottom:20px}
+.collapsed strong{color:var(--ink)}
+.choices{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;position:relative}
+.choice{border:1.5px solid var(--line);background:#fff;border-radius:12px;padding:14px 8px;display:flex;flex-direction:column;align-items:center;gap:8px;cursor:pointer;font:inherit;color:var(--ink)}
+.choice .pic{width:64px}
+.choice span{font-size:14px;font-weight:600}
+.choice[aria-pressed="true"]{border-color:var(--accent);background:var(--accent-soft);box-shadow:inset 0 0 0 1px var(--accent)}
+.choices .lock{position:absolute;inset:-4px;border-radius:14px;background:rgba(246,247,249,.94);display:grid;place-items:center;font-size:15px;font-weight:700;color:var(--sub);text-align:center;padding:10px}
+.reviewrow{display:flex;align-items:center;gap:10px;margin-bottom:16px;flex-wrap:wrap}
+.fadein{animation:fadein .5s ease both}
+@keyframes fadein{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+.placeholder{border:1.5px dashed var(--line);border-radius:14px;padding:60px 20px;text-align:center;color:var(--sub);font-size:15px}
+
+.nav{display:flex;justify-content:space-between;align-items:center;margin-top:26px;gap:10px}
+.nav .lockmsg{font-size:13px;color:var(--sub);text-align:center;flex:1}
+
+.side{background:var(--panel);border-radius:16px;padding:26px 20px 20px;margin-top:26px;display:flex;flex-direction:column;gap:18px}
+.tag{display:inline-block;background:var(--pink);color:#fff;font-size:11px;font-weight:700;padding:3px 8px;border-radius:999px}
+.side h2{font-size:18px;margin:8px 0 0;font-weight:800}
+.clock{display:flex;align-items:center;gap:10px;font-size:26px;font-weight:800}
+.clock .ring{width:22px;height:22px;border:2.5px solid var(--accent);border-radius:50%}
+.clock small{font-size:14px;font-weight:700}
+.side .muted{font-size:12px;color:var(--sub);margin-top:4px}
+.gridbox{background:#fff;border-radius:12px;padding:16px}
+.gridhead{display:flex;justify-content:space-between;align-items:center;font-weight:700;font-size:15px;margin-bottom:12px}
+.legend{display:flex;gap:8px;font-size:10px;color:var(--sub);font-weight:500;align-items:center}
+.legend i{display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:3px;vertical-align:-1px}
+.qgrid{display:grid;grid-template-columns:repeat(5,1fr);gap:9px}
+.qn{aspect-ratio:1;border:1.5px solid var(--line);border-radius:7px;background:#fff;font:inherit;font-weight:700;font-size:14px;color:var(--ink);cursor:pointer;padding:0}
+.qn.cur{border-color:var(--accent);color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent)}
+.qn.done{background:var(--accent);border-color:var(--accent);color:#fff}
+.qn:disabled{cursor:not-allowed;opacity:.55}
+.remain{background:var(--disabled);border-radius:10px;padding:14px;text-align:center;font-weight:700;color:var(--ink)}
+
+.notes{margin-top:18px;background:var(--chrome);border:1px solid var(--chrome-line);border-radius:14px;padding:18px 22px;line-height:1.65;font-size:14px}
+.notes h3{margin:0 0 6px;font-size:16px}
+.notes p{margin:6px 0;color:var(--chrome-text)}
+.notes .pol{color:var(--chrome-sub)}
+
+@media (max-width:900px){
+  .device{grid-template-columns:1fr;padding:22px 18px}
+  .side{margin-top:0}
+  .choices{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top">
+    <h1>기억력 문항뷰어 시안 프로토타입</h1>
+    <div class="tabs" role="tablist" id="tabs">
+      <button class="tab" role="tab" data-v="A">A. 남은 시간 이어보기</button>
+      <button class="tab" role="tab" data-v="B">B. 한 화면 전환</button>
+      <button class="tab" role="tab" data-v="C">C. 동시 노출 후 가림</button>
+    </div>
+    <button class="reset" id="reset">처음부터 다시</button>
+  </div>
+
+  <div class="device">
+    <div class="tools"><span>시험모드</span><span class="toggle"></span><span class="ico">II</span><span class="ico sq">→</span></div>
+    <section class="main">
+      <div class="content" id="content"></div>
+      <div class="nav" id="nav"></div>
+    </section>
+    <aside class="side">
+      <div><span class="tag">인지수행검사</span><h2>[인지수행검사] B세트</h2></div>
+      <div><div class="clock"><span class="ring"></span><span id="clock">00<small>분</small> 00<small>초</small></span></div><div class="muted">(제한 시간 미정)</div></div>
+      <div class="gridbox">
+        <div class="gridhead">전체 24문항<span class="legend"><span><i style="background:var(--accent)"></i>완료 문제</span><span><i style="border:1px solid var(--line)"></i>남은 문제</span></span></div>
+        <div class="qgrid" id="qgrid"></div>
+      </div>
+      <div class="remain" id="remain">24문제 남았어요.</div>
+    </aside>
+  </div>
+
+  <div class="notes" id="notes"></div>
+</div>
+
+<script>
+const DUR = 10000;
+const STIM = [{e:"🍎",n:"사과"},{e:"🚗",n:"자동차"},{e:"☂️",n:"우산"},{e:"🐶",n:"강아지"}];
+const CHOICES = [{e:"🐶",n:"강아지"},{e:"☂️",n:"우산"},{e:"🍎",n:"사과"},{e:"🚲",n:"자전거"}];
+const NOTES = {
+  A:{t:"A. 남은 시간 이어보기형",
+     r:"보기 노출 시간을 문항당 총 10초로 관리합니다. ‘문제 풀기’를 누르거나 다른 문항으로 이동하면 남은 시간이 그대로 보관되고, 문제 화면의 ‘보기 다시 보기’로 남은 시간만큼 다시 볼 수 있습니다. 0초가 되면 버튼이 꺼집니다. (예: 3초 보고 이동 → 돌아와서 7초 더 보기)",
+     p:"정책 영향: P-C2(노출 시간)는 유지, P-C3은 ‘재노출 금지’에서 ‘총 노출 시간 초과 금지’로 수정 필요. 나눠 보기에 따른 난이도 변화는 콘텐츠 검토 필요."},
+  B:{t:"B. 한 화면 전환형",
+     r:"페이지 이동 없이 같은 화면에서 보기가 10초 노출된 뒤, 그 자리에서 접히고 문제가 나타납니다. 노출 중에는 이동 버튼 대신 ‘바로 풀기’만 제공하고, 이후에는 ‘보기는 한 번만 볼 수 있어요’ 안내가 남습니다. 다른 문항에 갔다 돌아와도 문제 상태로 열립니다.",
+     p:"정책 영향: P-C2, P-C3 모두 그대로 유지. 사업부 승인 부담과 검사 타당성 리스크가 가장 적은 안."},
+  C:{t:"C. 동시 노출 후 가림형",
+     r:"보기와 질문 문장을 한 화면에 처음부터 함께 보여주고, 선택지만 잠가 둡니다. 10초가 지나면 보기가 가려지고 선택지가 열립니다. 노출 중에는 이동이 잠깁니다.",
+     p:"정책 영향: P-C3은 유지되지만, 질문을 미리 알고 외우게 되므로 측정 구성이 달라짐. 지필 원본 방식과 비교해 콘텐츠·사업부 확인이 전제."}
+};
+let variant = "A", S, last = Date.now(), t0 = Date.now();
+
+function init(){
+  S = { view:9, phase:"stim", running:true, remaining:DUR, selected:null, answered:{}, justEnded:false };
+  t0 = Date.now(); last = Date.now();
+  render();
+}
+function exposureEnd(){
+  S.running=false; S.phase="question"; S.justEnded=true; render();
+}
+function locked(){ return (variant==="B"||variant==="C") && S.view===9 && S.phase==="stim"; }
+function go(n){
+  if(n<1||n>24||locked()) return;
+  if(S.view===9 && variant==="A" && S.phase==="stim"){ S.running=false; S.phase="question"; }
+  S.view=n; S.justEnded=false; render();
+}
+function secs(){ return Math.ceil(S.remaining/1000); }
+function stimBox(extra=""){
+  return `<div class="stim" id="stimbox"><div class="lbl">&lt;보기&gt;</div><div class="items">${STIM.map((s,i)=>`<div class="item"><b>${i+1}</b><div class="pic" role="img" aria-label="${s.n}">${s.e}</div></div>`).join("")}</div>${extra}</div>`;
+}
+function meter(label, btn){
+  const pct = (S.remaining/DUR)*100;
+  return `<div class="meter"><div class="bar"><i id="barfill" style="width:${pct}%"></i></div><span class="sec ${secs()<=3?"low":""}" id="seclbl">${label} ${secs()}초</span>${btn||""}</div>`;
+}
+function choices(lockHtml=""){
+  return `<div class="choices">${CHOICES.map((c,i)=>`<button class="choice" data-c="${i}" aria-pressed="${S.selected===i}"><div class="pic">${c.e}</div><span>${c.n}</span></button>`).join("")}${lockHtml}</div>`;
+}
+function title(no, text){ return `<h2 class="q-title"><span class="no">${no}.</span><span>${text}</span></h2>`; }
+
+function renderContent(){
+  const el = document.getElementById("content");
+  if(S.view!==9){
+    el.innerHTML = title(S.view, "다른 문항 (프로토타입 예시 화면)") + `<div class="placeholder">${S.view}번 문항 자리입니다.<br>‘이전/다음’이나 오른쪽 9번을 눌러 기억력 문항으로 돌아가 보세요.</div>`;
+    return;
+  }
+  if(variant==="A"){
+    if(S.phase==="stim"){
+      el.innerHTML = title(9,"아래 &lt;보기&gt;를 보고 순서를 기억하세요.") + stimBox() +
+        meter("남은 보기 시간", `<button class="btn" id="toQ">문제 풀기</button>`) +
+        `<p class="hint">보기 시간은 모두 10초예요. 나눠서 봐도 돼요.</p>`;
+    } else {
+      const can = S.remaining>0;
+      el.innerHTML = title(9,"&lt;보기&gt;에서 3번에 있던 그림을 고르세요.") +
+        `<div class="reviewrow"><button class="btn line" id="review" ${can?"":"disabled"}>${can?`보기 다시 보기 · ${secs()}초 남음`:"보기 시간을 모두 사용했어요"}</button></div>` +
+        `<div class="${S.justEnded?"fadein":""}">${choices()}</div>`;
+    }
+  }
+  if(variant==="B"){
+    if(S.phase==="stim"){
+      el.innerHTML = title(9,"아래 &lt;보기&gt;를 보고 순서를 기억하세요.") + stimBox() +
+        meter("남은 시간", `<button class="btn" id="skip">다 외웠어요, 바로 풀기</button>`) +
+        `<p class="hint">보기는 한 번만 볼 수 있어요. 시간이 끝나면 이 자리에서 문제가 나와요.</p>`;
+    } else {
+      el.innerHTML = `<div class="collapsed ${S.justEnded?"fadein":""}"><span><strong>&lt;보기&gt;</strong> 보기 시간이 끝났어요.</span><span>보기는 한 번만 볼 수 있어요</span></div>` +
+        `<div class="${S.justEnded?"fadein":""}">` + title(9,"&lt;보기&gt;에서 3번에 있던 그림을 고르세요.") + choices() + `</div>`;
+    }
+  }
+  if(variant==="C"){
+    const stim = S.phase==="stim";
+    el.innerHTML = title(9,"아래 &lt;보기&gt;를 보고, 3번에 있던 그림을 고르세요.") +
+      stimBox(stim?"":`<div class="cover ${S.justEnded?"fadein":""}"><strong>보기 시간이 끝났어요</strong><span>이제 아래에서 답을 고르세요.</span></div>`) +
+      (stim? meter("남은 보기 시간", `<button class="btn" id="skip">바로 풀기</button>`) : "") +
+      `<div style="margin-top:20px">${choices(stim?`<div class="lock">보기 시간이 끝나면 선택지가 열려요</div>`:"")}</div>`;
+  }
+}
+function renderNav(){
+  const nav = document.getElementById("nav");
+  if(locked()){
+    nav.innerHTML = `<button class="btn" disabled>&lt; 이전</button><span class="lockmsg">보기 시간이 끝나면 이동할 수 있어요</span><button class="btn" disabled>다음 &gt;</button>`;
+  } else {
+    nav.innerHTML = `<button class="btn" id="prev" ${S.view===1?"disabled":""}>&lt; 이전</button><span class="lockmsg"></span><button class="btn" id="next" ${S.view===24?"disabled":""}>다음 &gt;</button>`;
+  }
+}
+function renderSide(){
+  const g = document.getElementById("qgrid"); const lk = locked();
+  g.innerHTML = Array.from({length:24},(_,i)=>{const n=i+1;const cls=["qn"];if(S.answered[n])cls.push("done");if(n===S.view)cls.push("cur");
+    return `<button class="${cls.join(" ")}" data-q="${n}" ${lk&&n!==9?"disabled title=\"보기 시간이 끝나면 이동할 수 있어요\"":""}>${n}</button>`}).join("");
+  const done = Object.keys(S.answered).length;
+  document.getElementById("remain").textContent = `${24-done}문제 남았어요.`;
+}
+function renderNotes(){
+  const n = NOTES[variant];
+  document.getElementById("notes").innerHTML = `<h3>${n.t}</h3><p>${n.r}</p><p class="pol">${n.p}</p>`;
+  document.querySelectorAll(".tab").forEach(t=>t.setAttribute("aria-selected", t.dataset.v===variant));
+}
+function render(){ renderContent(); renderNav(); renderSide(); renderNotes(); S.justEnded=false; }
+
+document.addEventListener("click", e=>{
+  const t = e.target.closest("button"); if(!t) return;
+  if(t.dataset.v){ variant=t.dataset.v; init(); return; }
+  if(t.id==="reset"){ init(); return; }
+  if(t.id==="prev") go(S.view-1);
+  if(t.id==="next") go(S.view+1);
+  if(t.dataset.q) go(+t.dataset.q);
+  if(t.id==="toQ"){ S.running=false; S.phase="question"; S.justEnded=true; render(); }
+  if(t.id==="skip"){ S.remaining=0; exposureEnd(); }
+  if(t.id==="review"){ S.phase="stim"; S.running=true; render(); }
+  if(t.dataset.c!==undefined && !t.closest(".choices").querySelector(".lock")){ S.selected=+t.dataset.c; S.answered[9]=true; render(); }
+});
+
+setInterval(()=>{
+  const now = Date.now(), dt = now-last; last = now;
+  const el = Math.floor((now-t0)/1000);
+  document.getElementById("clock").innerHTML = `${String(Math.floor(el/60)).padStart(2,"0")}<small>분</small> ${String(el%60).padStart(2,"0")}<small>초</small>`;
+  if(S.running && S.view===9 && S.phase==="stim"){
+    S.remaining = Math.max(0, S.remaining-dt);
+    if(S.remaining===0){ exposureEnd(); return; }
+    const f=document.getElementById("barfill"), l=document.getElementById("seclbl");
+    if(f) f.style.width = (S.remaining/DUR*100)+"%";
+    if(l){ l.textContent = l.textContent.replace(/\d+초$/, secs()+"초"); l.classList.toggle("low", secs()<=3); }
+  }
+},100);
+
+init();
+</script>
+</body>
+</html>
